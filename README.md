@@ -12,7 +12,7 @@ Each wallpaper is one `wallpaper.lua`. Copy it to the SD card as `/sd/wallpaper.
 | [**Boids**](boids/) — flock over sunflowers<br>![](boids/screenshot.png) | [**Campfire**](fire/) — Doom fire effect<br>![](fire/screenshot.png) |
 | [**Rain**](rain/) — drops on the window<br>![](rain/screenshot.png) | [**Pet Cat**](pet/) — feed and play in the app<br>![](pet/screenshot.png) |
 | [**Kyiv Metro**](metro/) — trains on schedule<br>![](metro/screenshot.png) | [**Air Raid Alerts**](alerts/) — live map by oblast *(Wi-Fi)*<br>![](alerts/screenshot.png) |
-| [**Home Assistant**](ha/) — sensors and switches *(Wi-Fi)*<br>![](ha/screenshot.png) | |
+| [**Home Assistant**](ha/) — sensors and switches *(Wi-Fi)*<br>![](ha/screenshot.png) | [**Motion Demo**](motion/) — ten demoscene effects<br>![](motion/screenshot.png) |
 | [**Starfield**](starfield/) — Keira's example<br>![](starfield/screenshot.png) | [**ISS Tracker**](iss_tracker/) — live ISS position *(Wi-Fi)*<br>![](iss_tracker/image.png) |
 
 *(Wi-Fi)*: open the script as an app once to download data. Most of these wallpapers only show what is saved, because the launcher couldn't make network requests on older firmware. Air Raid Alerts and Home Assistant also refresh on the wallpaper with a recent Keira.
