@@ -1,6 +1,8 @@
 # Air Raid Alerts
 
-A map of Ukraine with active air raid alerts by oblast, from the [ubilling.net.ua](https://ubilling.net.ua/aerialalerts/) API (no key needed). Oblasts with an alert pulse red, and ones where the alert just ended glow green for a few minutes. Your oblast is marked with a ring: set it in `HOME` at the top of the script (default `м. Київ`).
+A map of Ukraine with active air raid alerts by raion, coloured by the alert level introduced in September 2026: yellow for drones, red for missiles, ballistic and massed attacks. Raions where the alert just ended glow green for a few minutes. Your raion is marked with a ring and its status (with the threat type) is shown at the bottom: set it in `HOME` at the top of the script (default `м. Київ`, or e.g. `Львівський район`).
+
+Data comes from the [NEPTUN](https://neptun.in.ua/developers) API, with [Tryvoha.online](https://tryvoha.online/api) as a fallback. Neither needs a key. Both are unofficial aggregators: use the official alerts and sirens for your safety.
 
 ![screenshot](screenshot.png)
 
@@ -8,7 +10,7 @@ A map of Ukraine with active air raid alerts by oblast, from the [ubilling.net.u
 
 Copy `wallpaper.lua` to the SD card as `/sd/wallpaper.lua` and connect to Wi-Fi in Keira. The data refreshes every 30 seconds, in the app and on the wallpaper (wallpapers need a recent Keira with network modules). On older firmware, open `/sd/wallpaper.lua` from the file manager to refresh. The last state is saved in `alerts.txt`, and the map turns grey when it is older than 15 minutes.
 
-The API has no separate entry for Crimea, so it shows Sevastopol's status.
+NEPTUN paints a raion when any of its hromadas or cities is under alert. Tryvoha.online skips hromada-only alerts and has no data for Crimea.
 
 ## Controls (app only)
 
@@ -19,4 +21,4 @@ The API has no separate entry for Crimea, so it shows Sevastopol's status.
 
 ## Map
 
-Oblast borders are from [geoBoundaries](https://www.geoboundaries.org) (CC BY 4.0), baked into the script by `tools/gen_map.py`.
+Raion and oblast borders are from NEPTUN ([raions.geojson](https://neptun.in.ua/raions.geojson), [oblasts.geojson](https://neptun.in.ua/oblasts.geojson)), baked into the script by `tools/gen_map.py`.

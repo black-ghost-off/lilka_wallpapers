@@ -11,7 +11,7 @@ Each wallpaper is one `wallpaper.lua`. Copy it to the SD card as `/sd/wallpaper.
 | [**GitHub**](github/) — contribution grid *(Wi-Fi)*<br>![](github/screenshot.png) | [**Synthwave**](synthwave/) — neon grid and sun<br>![](synthwave/screenshot.png) |
 | [**Boids**](boids/) — flock over sunflowers<br>![](boids/screenshot.png) | [**Campfire**](fire/) — Doom fire effect<br>![](fire/screenshot.png) |
 | [**Rain**](rain/) — drops on the window<br>![](rain/screenshot.png) | [**Pet Cat**](pet/) — feed and play in the app<br>![](pet/screenshot.png) |
-| [**Kyiv Metro**](metro/) — trains on schedule<br>![](metro/screenshot.png) | [**Air Raid Alerts**](alerts/) — live map by oblast *(Wi-Fi)*<br>![](alerts/screenshot.png) |
+| [**Kyiv Metro**](metro/) — trains on schedule<br>![](metro/screenshot.png) | [**Air Raid Alerts**](alerts/) — live map by raion, yellow and red levels *(Wi-Fi)*<br>![](alerts/screenshot.png) |
 | [**Home Assistant**](ha/) — sensors and switches *(Wi-Fi)*<br>![](ha/screenshot.png) | [**Motion Demo**](motion/) — ten demoscene effects<br>![](motion/screenshot.png) |
 | [**Starfield**](starfield/) — Keira's example<br>![](starfield/screenshot.png) | [**ISS Tracker**](iss_tracker/) — live ISS position *(Wi-Fi)*<br>![](iss_tracker/image.png) |
 
@@ -19,6 +19,6 @@ Each wallpaper is one `wallpaper.lua`. Copy it to the SD card as `/sd/wallpaper.
 
 ## Credits
 
-- [alerts](alerts/) uses oblast borders from [geoBoundaries](https://www.geoboundaries.org) (CC BY 4.0).
+- [alerts](alerts/) uses alert data and raion borders from [NEPTUN](https://neptun.in.ua/developers), with [Tryvoha.online](https://tryvoha.online/api) as a fallback.
 - [starfield](starfield/) is the example from [lilka-dev/keira](https://github.com/lilka-dev/keira/blob/main/data/wallpaper.lua), unchanged.
 - [iss_tracker](iss_tracker/) is a copy of [black-ghost-off/lilka_iss_tracker](https://github.com/black-ghost-off/lilka_iss_tracker), unchanged. See its own README for installing it.
