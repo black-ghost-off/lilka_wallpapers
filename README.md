@@ -13,13 +13,21 @@ Each wallpaper is one `wallpaper.lua`. Copy it to the SD card as `/sd/wallpaper.
 | [**Rain**](rain/) — drops on the window<br>![](rain/screenshot.png) | [**Pet Cat**](pet/) — feed and play in the app<br>![](pet/screenshot.png) |
 | [**Kyiv Metro**](metro/) — trains on schedule<br>![](metro/screenshot.png) | [**Air Raid Alerts**](alerts/) — live map by raion, yellow and red levels *(Wi-Fi)*<br>![](alerts/screenshot.png) |
 | [**Home Assistant**](ha/) — sensors and switches *(Wi-Fi)*<br>![](ha/screenshot.png) | [**Motion Demo**](motion/) — ten demoscene effects<br>![](motion/screenshot.png) |
-| [**Sorting**](sorting/) — sort algorithms on a 2D gradient<br>![](sorting/screenshot.png) | |
+| [**Sorting**](sorting/) — sort algorithms on a 2D gradient<br>![](sorting/screenshot.png) | [**Pathfinding**](pathfind/) — mazes, BFS, Dijkstra, A*<br>![](pathfind/screenshot.png) |
+| [**Cellular Automata**](automata/) — Life, spirals, ants, rule 30<br>![](automata/screenshot.png) | [**Falling Sand**](sand/) — sand and water on ledges<br>![](sand/screenshot.png) |
+| [**Snake AI**](snake/) — plays itself, playable in the app<br>![](snake/screenshot.png) | [**Pong Bots**](pong/) — two bots, playable in the app<br>![](pong/screenshot.png) |
+| [**Crypto Ticker**](ticker/) — Binance prices, 24h charts *(Wi-Fi)*<br>![](ticker/screenshot.png) | [**Double Pendulum**](pendulum/) — chaos with trails<br>![](pendulum/screenshot.png) |
+| [**Gravity**](gravity/) — n-body orbits and mergers<br>![](gravity/screenshot.png) | [**Particle Life**](particles/) — random rules, emergent creatures<br>![](particles/screenshot.png) |
+| [**Flag**](cloth/) — cloth physics in the wind<br>![](cloth/screenshot.png) | [**Power Outages**](outages/) — YASNO schedule for your group *(Wi-Fi)*<br>![](outages/screenshot.png) |
+| [**Earthquakes**](quakes/) — USGS, past week on a map *(Wi-Fi)*<br>![](quakes/screenshot.png) | [**Air Quality**](air/) — AQI and pollutants *(Wi-Fi)*<br>![](air/screenshot.png) |
+| [**Space Weather**](space/) — Kp index and aurora *(Wi-Fi)*<br>![](space/screenshot.png) | [**On This Day**](history/) — events from Wikipedia *(Wi-Fi)*<br>![](history/screenshot.png) |
 | [**Starfield**](starfield/) — Keira's example<br>![](starfield/screenshot.png) | [**ISS Tracker**](iss_tracker/) — live ISS position *(Wi-Fi)*<br>![](iss_tracker/image.png) |
 
-*(Wi-Fi)*: open the script as an app once to download data. Most of these wallpapers only show what is saved, because the launcher couldn't make network requests on older firmware. Air Raid Alerts and Home Assistant also refresh on the wallpaper with a recent Keira.
+*(Wi-Fi)*: open the script as an app once to download data. On older firmware the launcher can't make network requests, so the wallpaper only shows what was saved. With a recent Keira, all Wi-Fi wallpapers except Weather, Currency, GitHub and ISS Tracker also refresh on their own.
 
 ## Credits
 
+- [quakes](quakes/) uses land outlines from [Natural Earth](https://www.naturalearthdata.com/) (public domain).
 - [alerts](alerts/) uses alert data and raion borders from [NEPTUN](https://neptun.in.ua/developers), with [Tryvoha.online](https://tryvoha.online/api) as a fallback.
 - [starfield](starfield/) is the example from [lilka-dev/keira](https://github.com/lilka-dev/keira/blob/main/data/wallpaper.lua), unchanged.
 - [iss_tracker](iss_tracker/) is a copy of [black-ghost-off/lilka_iss_tracker](https://github.com/black-ghost-off/lilka_iss_tracker), unchanged. See its own README for installing it.
