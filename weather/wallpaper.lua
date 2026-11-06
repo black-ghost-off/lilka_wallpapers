@@ -1,11 +1,14 @@
 -- Погода: анімована сцена за даними Open-Meteo (без ключа API).
--- Застосунок завантажує погоду в weather.txt (потрібен Wi-Fi), шпалери лише читають цей файл:
+-- Місто — за IP або з CITY нижче. Застосунок завантажує погоду в weather.txt (потрібен Wi-Fi),
+-- шпалери лише читають цей файл:
 -- у лаунчера замало стека для HTTP.
 -- Застосунок: A — оновити, START — вихід.
 
 lilka.fullscreen = false
 
-local CITY, LAT, LON = "Київ", 50.45, 30.52
+-- Порожньо — місто визначиться за IP (з VPN буде місто VPN-сервера).
+-- Або назва українською чи англійською: "Львів", "Odesa", "Warsaw".
+local CITY = ""
 local CACHE = "weather.txt"
 local REFRESH = 30 * 60
 
@@ -87,18 +90,58 @@ local function load()
     data = ok and parse_cache(text) or nil
 end
 
+local function get(url)
+    local ok, res = pcall(http.execute, { url = url })
+    return ok and res.code == 200 and res.response or nil
+end
+
+local function urlencode(s)
+    return (s:gsub("[^%w%-_.~]", function(c) return string.format("%%%02X", c:byte()) end))
+end
+
+-- Назва українською й координати за назвою міста (геокодер Open-Meteo)
+local function geocode(name)
+    local body = get("https://geocoding-api.open-meteo.com/v1/search?count=1&language=uk&name=" .. urlencode(name))
+    local res = body and body:match('"results":%[(%b{})')
+    if not res then return nil end
+    return res:match('"name":"([^"]*)"'), tonumber(res:match('"latitude":(-?[%d.]+)')), tonumber(res:match('"longitude":(-?[%d.]+)'))
+end
+
+-- Місце: з налаштування CITY або за IP; повертає назву, широту, довготу
+local function locate()
+    if CITY ~= "" then
+        -- Те саме місто вже знайдене раніше: не питаємо геокодер щоразу
+        if data and data.city == CITY and data.lat then return data.place, data.lat, data.lon end
+        return geocode(CITY)
+    end
+    local body = get("https://ipwho.is/?fields=success,city,latitude,longitude")
+    if not (body and body:find('"success":%s*true')) then return nil end
+    local city = body:match('"city":%s*"([^"]*)"')
+    local lat, lon = tonumber(body:match('"latitude":%s*(-?[%d.]+)')), tonumber(body:match('"longitude":%s*(-?[%d.]+)'))
+    if not (city and lat and lon) then return nil end
+    -- ipwho.is віддає JSON з пробілами після «:» і назву англійською, тож українську беремо в геокодера, а координати — з IP
+    if data and data.city == "" and data.ipcity == city then return data.place, lat, lon, city end
+    return (geocode(city)) or city, lat, lon, city
+end
+
 local function download()
     if not (http and wifi) or wifi.get_status() ~= 3 then
         status = "Wi-Fi не під'єднано"
         return
     end
     collectgarbage()
-    local url = "https://api.open-meteo.com/v1/forecast?latitude=" .. LAT .. "&longitude=" .. LON
+    local place, lat, lon, ipcity = locate()
+    if not lat then
+        status = CITY ~= "" and ("Не знайдено місто " .. CITY) or "Не вдалося визначити місто"
+        return
+    end
+    local url = "https://api.open-meteo.com/v1/forecast?latitude=" .. lat .. "&longitude=" .. lon
         .. "&current=temperature_2m,weather_code,wind_speed_10m,is_day"
         .. "&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=4"
-    local ok, res = pcall(http.execute, { url = url })
-    local text = ok and res.code == 200 and parse_api(res.response)
+    local text = parse_api(get(url))
     if text then
+        text = text .. "\ncity=" .. CITY .. "\nipcity=" .. (ipcity or "") .. "\nplace=" .. place
+            .. "\nlat=" .. lat .. "\nlon=" .. lon
         pcall(resources.write_file, CACHE, text)
         load()
         status = nil
@@ -326,7 +369,7 @@ function lilka.draw()
     local light_text = is_night or k == "rain" or k == "storm" or k == "snow"
     local soft = light_text and rgb(190, 200, 220) or rgb(40, 50, 70)
     local main = light_text and white or rgb(20, 28, 45)
-    text(10, 22, CITY, soft, "8x13")
+    text(10, 22, data and data.place or (CITY ~= "" and CITY or "Погода"), soft, "8x13")
     if data then
         local tt = round(data.temp)
         local s = (tt > 0 and "+" or "") .. string.format("%d", tt)
@@ -363,7 +406,7 @@ function lilka.draw()
     else
         text(10, 70, "Немає даних", main, "9x15")
         text(10, 92, status or "Відкрийте wallpaper.lua", soft, "6x12")
-        text(10, 106, "як застосунок з Wi-Fi", soft, "6x12")
+        if not status then text(10, 106, "як застосунок з Wi-Fi", soft, "6x12") end
     end
     if status and data and controller then text(10, 120, status, rgb(255, 120, 100), "6x12") end
 end
