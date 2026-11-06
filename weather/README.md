@@ -10,7 +10,11 @@ Copy `wallpaper.lua` to the SD card as `/sd/wallpaper.lua`. Connect to Wi-Fi in 
 
 ## City
 
-By default the city is found from your IP address (via [ipwho.is](https://ipwho.is), no key); with a VPN that is the VPN server's city. To choose a city, set its name in `CITY` at the top of the script, in Ukrainian or English, for example `local CITY = "Львів"` or `"Warsaw"`: [Open-Meteo geocoding](https://open-meteo.com/en/docs/geocoding-api) finds it.
+By default the city is found from your IP address (via [ipwho.is](https://ipwho.is), no key); with a VPN that is the VPN server's city. To choose a city, set its name in `CITY` at the top of the script, for example `local CITY = "Львів"`: [Open-Meteo geocoding](https://open-meteo.com/en/docs/geocoding-api) finds it.
+
+Examples that work: `"Київ"`, `"Харків"`, `"Одеса"`, `"Дніпро"`, `"Запоріжжя"`, `"Львів"`, `"Ужгород"`, `"Чернігів"`, `"Біла Церква"`, `"Ірпінь"`, `"Кам'янець-Подільський"`, `"Буковель"`, `"Варшава"`, `"Berlin"`, `"London"`, `"New York"`, `"Toronto"`.
+
+Ukrainian names work best: common English ones like `"Kyiv"`, `"Lviv"` or `"Odesa"` are found too, but some transliterations are not (`"Kamianske"`). When several cities share a name, the largest one wins: `"Alexandria"` is in Egypt, `"Олександрія"` is in Ukraine.
 
 ## Controls (app only)
 
