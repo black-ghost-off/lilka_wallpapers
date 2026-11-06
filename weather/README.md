@@ -16,6 +16,8 @@ Examples that work: `"Київ"`, `"Харків"`, `"Одеса"`, `"Дніпр
 
 Ukrainian names work best: common English ones like `"Kyiv"`, `"Lviv"` or `"Odesa"` are found too, but some transliterations are not (`"Kamianske"`). When several cities share a name, the largest one wins: `"Alexandria"` is in Egypt, `"Олександрія"` is in Ukraine.
 
+Cities abroad work too: day and night, "today" in the forecast and the clock follow the city's own time zone, and when it differs from the Lilka's clock the screen shows the local time there ("Там зараз 09:59").
+
 ## Controls (app only)
 
 | Button | Action |

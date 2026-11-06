@@ -52,8 +52,11 @@ local function parse_cache(text)
     local d = { days = {} }
     for k, v in text:gmatch("(%w+)=([^\n]*)") do
         if k == "day" then
-            local date, code, hi, lo = v:match("([^,]+),([^,]+),([^,]+),([^,]+)")
-            d.days[#d.days + 1] = { date = date, code = tonumber(code), hi = tonumber(hi), lo = tonumber(lo) }
+            -- дата,код,макс,мін[,схід,захід] — схід і захід у хвилинах за місцевим часом міста
+            local f = {}
+            for x in v:gmatch("[^,]+") do f[#f + 1] = x end
+            d.days[#d.days + 1] = { date = f[1], code = tonumber(f[2]), hi = tonumber(f[3]), lo = tonumber(f[4]),
+                rise = tonumber(f[5]), set = tonumber(f[6]) }
         else
             d[k] = tonumber(v) or v
         end
@@ -72,6 +75,7 @@ local function parse_api(body)
         "code=" .. cur:match('"weather_code":(%d+)'),
         "wind=" .. cur:match('"wind_speed_10m":([%d.]+)'),
         "isday=" .. cur:match('"is_day":(%d)'),
+        "utc=" .. (body:match('"utc_offset_seconds":(-?%d+)') or ""),
     }
     local function list(name, pat)
         local out = {}
@@ -83,8 +87,15 @@ local function parse_api(body)
     local codes = list("weather_code", "(-?[%d.]+)")
     local his = list("temperature_2m_max", "(-?[%d.]+)")
     local los = list("temperature_2m_min", "(-?[%d.]+)")
+    local rises = list("sunrise", '"[^"]*T(%d+:%d+)"')
+    local sets = list("sunset", '"[^"]*T(%d+:%d+)"')
+    local function minutes(hm)
+        local h, m = (hm or ""):match("(%d+):(%d+)")
+        return h and tonumber(h) * 60 + tonumber(m) or ""
+    end
     for i = 1, #dates do
         lines[#lines + 1] = "day=" .. dates[i] .. "," .. codes[i] .. "," .. his[i] .. "," .. los[i]
+            .. "," .. minutes(rises[i]) .. "," .. minutes(sets[i])
     end
     return table.concat(lines, "\n")
 end
@@ -141,7 +152,7 @@ local function download()
     end
     local url = "https://api.open-meteo.com/v1/forecast?latitude=" .. lat .. "&longitude=" .. lon
         .. "&current=temperature_2m,weather_code,wind_speed_10m,is_day"
-        .. "&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=4"
+        .. "&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto&forecast_days=5"
     local text = parse_api(get(url))
     if text then
         text = text .. "\ncity=" .. CITY .. "\nipcity=" .. (ipcity or "") .. "\nplace=" .. place
@@ -155,8 +166,34 @@ local function download()
 end
 
 local function kind() return data and kind_of(data.code) or "cloudy" end
+
+-- Зсув годинника Lilka від UTC (Keira живе за київським часом)
+local function device_offset()
+    local now = os.time()
+    local u = os.date("!*t", now)
+    u.isdst = os.date("*t", now).isdst
+    return now - os.time(u)
+end
+
+-- Дата й час зараз у місті з прогнозу (воно може бути в іншому часовому поясі)
+local function city_now()
+    if data and data.utc then return os.date("!*t", os.time() + data.utc) end
+    return os.date("*t")
+end
+
+local function city_today()
+    local c = city_now()
+    return string.format("%04d-%02d-%02d", c.year, c.month, c.day), c.hour * 60 + c.min
+end
+
 local function night()
-    if data and data.isday then return data.isday == 0 end
+    if data then
+        local today, m = city_today()
+        for _, d in ipairs(data.days) do
+            if d.date == today and d.rise and d.set then return m < d.rise or m >= d.set end
+        end
+        if data.isday then return data.isday == 0 end
+    end
     local h = os.date("*t").hour
     return h < 7 or h >= 19
 end
@@ -383,16 +420,25 @@ function lilka.draw()
         display.draw_circle(dx, 34, 3, main)
         text(10, 88, KINDS[k], main, "7x13")
         text(10, 104, string.format("Вітер %d км/год", round(data.wind)), soft, "6x12")
+        -- Місто в іншому часовому поясі: показуємо його час
+        if data.utc and os.time() > 1700000000 and data.utc ~= device_offset() then
+            local c = city_now()
+            text(10, 120, string.format("Там зараз %02d:%02d", c.hour, c.min), soft, "6x12")
+        end
 
         local panel_y = H - 58
         local pc = is_night and rgb(14, 20, 42) or rgb(30, 40, 60)
         display.fill_rect(6, panel_y, W - 12, 52, pc)
-        local n = min(4, #data.days)
+        -- Прогноз з сьогоднішнього дня в місті: старі дні з кешу пропускаємо
+        local today = city_today()
+        local first = 1
+        while data.days[first + 1] and data.days[first].date < today do first = first + 1 end
+        local n = min(4, #data.days - first + 1)
         local cw = (W - 12) / max(1, n)
         for i = 1, n do
-            local d = data.days[i]
+            local d = data.days[first + i - 1]
             local x = floor(6 + (i - 0.5) * cw)
-            text(x - 6, panel_y + 13, i == 1 and "Сьог" or day_name(d.date), rgb(180, 190, 210), "6x12")
+            text(x - 6, panel_y + 13, d.date == today and "Сьог" or day_name(d.date), rgb(180, 190, 210), "6x12")
             icon(kind_of(d.code), x, panel_y + 26)
             text(x - 16, panel_y + 48, string.format("%d/%d", round(d.hi), round(d.lo)), white, "6x12")
         end
@@ -412,5 +458,5 @@ function lilka.draw()
         text(10, 92, status or "Відкрийте wallpaper.lua", soft, "6x12")
         if not status then text(10, 106, "як застосунок з Wi-Fi", soft, "6x12") end
     end
-    if status and data and controller then text(10, 120, status, rgb(255, 120, 100), "6x12") end
+    if status and data and controller then text(10, 134, status, rgb(255, 120, 100), "6x12") end
 end
