@@ -21,6 +21,7 @@ Each wallpaper is one `wallpaper.lua`. Copy it to the SD card as `/sd/wallpaper.
 | [**Flag**](cloth/) — cloth physics in the wind<br>![](cloth/screenshot.png) | [**Power Outages**](outages/) — YASNO schedule for your group *(Wi-Fi)*<br>![](outages/screenshot.png) |
 | [**Earthquakes**](quakes/) — USGS, past week on a map *(Wi-Fi)*<br>![](quakes/screenshot.png) | [**Air Quality**](air/) — AQI and pollutants *(Wi-Fi)*<br>![](air/screenshot.png) |
 | [**Space Weather**](space/) — Kp index and aurora *(Wi-Fi)*<br>![](space/screenshot.png) | [**On This Day**](history/) — events from Wikipedia *(Wi-Fi)*<br>![](history/screenshot.png) |
+| [**Stocks**](stocks/) — prices and 30-day charts *(Wi-Fi)*<br>![](stocks/screenshot.png) | |
 | [**Starfield**](starfield/) — Keira's example<br>![](starfield/screenshot.png) | [**ISS Tracker**](iss_tracker/) — live ISS position *(Wi-Fi)*<br>![](iss_tracker/image.png) |
 
 *(Wi-Fi)*: open the script as an app once to download data. On older firmware the launcher can't make network requests, so the wallpaper only shows what was saved. With a recent Keira, all Wi-Fi wallpapers except Weather, Currency, GitHub and ISS Tracker also refresh on their own.
