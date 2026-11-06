@@ -191,7 +191,7 @@ function lilka.draw()
     display.fill_screen(0)
     display.fill_rect(OX, OY, MAP_W, MAP_H, C.sea)
     for lon = -150, 150, 30 do
-        local x = floor(to_map(0, lon))
+        local x = floor((to_map(0, lon)))
         for y = OY + 1, OY + MAP_H - 1, 4 do display.fill_rect(x, y, 1, 1, C.grid) end
     end
     for _, r in ipairs(land) do display.fill_rect(OX + r[1], OY + r[2], r[3], r[4], C.land) end
