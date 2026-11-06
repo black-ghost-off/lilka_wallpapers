@@ -1,7 +1,7 @@
--- Акції: ціна, зміна за день і графік за 30 днів (Yahoo Finance, без ключа API).
+-- Акції: ціна, зміна й графік за обраний період (Yahoo Finance, без ключа API).
 -- Застосунок завантажує дані в stocks.txt (потрібен Wi-Fi); шпалери на свіжій Keira
--- оновлюють їх самі, по одному тікеру за раз.
--- Застосунок: A — оновити, START — вихід.
+-- оновлюють їх самі, по одному тікеру за раз. Обраний період зберігається там само.
+-- Застосунок: ← → — період, A — оновити, START — вихід.
 
 lilka.fullscreen = false
 
@@ -9,7 +9,18 @@ lilka.fullscreen = false
 local SYMBOLS = { "^GSPC", "AAPL", "NVDA" }
 local NAMES = { ["^GSPC"] = "S&P 500", ["^IXIC"] = "NASDAQ", ["^DJI"] = "DOW" }
 local CACHE = "stocks.txt"
-local REFRESH = 15 * 60
+local PERIOD = "1mo"   -- типовий період, поки його не змінили стрілками
+
+-- range/interval для Yahoo; keep — скільки останніх точок лишити; refresh — секунд між оновленнями
+local PERIODS = {
+    { key = "1h",  label = "1 год",   range = "1d",  interval = "2m",  keep = 30, refresh = 2 * 60 },
+    { key = "1d",  label = "день",    range = "1d",  interval = "5m",  refresh = 5 * 60 },
+    { key = "5d",  label = "5 днів",  range = "5d",  interval = "30m", refresh = 15 * 60 },
+    { key = "1mo", label = "місяць",  range = "1mo", interval = "1d",  refresh = 15 * 60 },
+    { key = "6mo", label = "6 міс",   range = "6mo", interval = "1d",  refresh = 60 * 60 },
+    { key = "1y",  label = "рік",     range = "1y",  interval = "1wk", refresh = 60 * 60 },
+    { key = "5y",  label = "5 років", range = "5y",  interval = "1mo", refresh = 6 * 60 * 60 },
+}
 local API = "https://query2.finance.yahoo.com/v8/finance/chart/"
 
 local sin, floor = math.sin, math.floor
@@ -20,8 +31,9 @@ local function rgb(r, g, b) return display.color565(floor(clamp(r, 0, 255)), flo
 
 local W, H
 local t = 0
-local data = {}   -- data[sym] = { closes = {...}, name = "Apple Inc.", cur = "USD", open_at, close_at }
+local data = {}   -- data[sym] = { closes = { база, ... }, name = "Apple Inc.", cur = "USD", open_at, close_at }
 local at, status
+local period = 1
 local next_sym, next_fetch = 1, 1.5
 
 local BG = { 12, 16, 28 }
@@ -29,8 +41,14 @@ local PALETTE = { { 90, 150, 255 }, { 230, 230, 240 }, { 120, 220, 120 }, { 250,
 
 local function label(sym) return NAMES[sym] or sym end
 
+local function find_period(key)
+    for i, p in ipairs(PERIODS) do if p.key == key then return i end end
+end
+period = find_period(PERIOD) or 4
+local function P() return PERIODS[period] end
+
 local function save()
-    local lines = { "at=" .. (at or 0) }
+    local lines = { "at=" .. (at or 0), "period=" .. P().key }
     for _, s in ipairs(SYMBOLS) do
         local d = data[s]
         if d then
@@ -48,6 +66,8 @@ local function load()
         local k, v = line:match("^([^=#]+)=(.*)$")
         if k == "at" then
             at = tonumber(v)
+        elseif k == "period" then
+            period = find_period(v) or period
         elseif k then
             local list = {}
             for x in v:gmatch("[^,]+") do list[#list + 1] = tonumber(x) end
@@ -71,7 +91,8 @@ local function fetch(sym)
         return false
     end
     collectgarbage()
-    local url = API .. sym:gsub("%^", "%%5E") .. "?range=1mo&interval=1d"
+    local p = P()
+    local url = API .. sym:gsub("%^", "%%5E") .. "?range=" .. p.range .. "&interval=" .. p.interval
     local ok, res = pcall(http.execute, { url = url })
     if not (ok and res.code == 200 and res.response) then
         status = "Не вдалося завантажити"
@@ -83,16 +104,25 @@ local function fetch(sym)
     if closes then
         for v in closes:gmatch("[^%[%],]+") do
             local n = tonumber(v)
-            if n then list[#list + 1] = string.format("%.2f", n) end -- null (свято) пропускаємо
+            if n then list[#list + 1] = n end -- null (свято, пауза) пропускаємо
         end
     end
     -- Поточна ціна точніша за останню свічку, поки біржа відкрита
     local price = tonumber(body:match('"regularMarketPrice":([%d.]+)'))
-    if price and #list > 0 then list[#list] = string.format("%.2f", price) end
+    if price and #list > 0 then list[#list] = price end
+    if p.keep and #list > p.keep then
+        local cut = {}
+        for k = #list - p.keep + 1, #list do cut[#cut + 1] = list[k] end
+        list = cut
+    end
     if #list < 2 then
         status = "Незрозуміла відповідь"
         return false
     end
+    -- Перша точка — база для зміни: закриття перед періодом (або початок години)
+    local base = not p.keep and tonumber(body:match('"chartPreviousClose":([%d.]+)'))
+    if base then table.insert(list, 1, base) end
+    for k, v in ipairs(list) do list[k] = tonumber(string.format("%.2f", v)) end
     local reg = body:match('"regular":(%b{})') or ""
     data[sym] = {
         closes = list,
@@ -101,7 +131,6 @@ local function fetch(sym)
         open_at = tonumber(reg:match('"start":(%d+)')),
         close_at = tonumber(reg:match('"end":(%d+)')),
     }
-    for k, v in ipairs(data[sym].closes) do data[sym].closes[k] = tonumber(v) end
     at, status = os.time(), nil
     save()
     return true
@@ -120,27 +149,39 @@ function lilka.init()
     load()
     if controller then
         fetch_all()
-        next_fetch = REFRESH
+        next_fetch = P().refresh
     end
+end
+
+-- Новий період: старі дані вже не підходять, тож завантажуємо тікери наново по одному
+local function switch(d)
+    period = (period - 1 + d) % #PERIODS + 1
+    data, at, status, t = {}, nil, nil, 0
+    save()
+    next_sym, next_fetch = 1, 0
 end
 
 function lilka.update(delta)
     t = t + delta
     if controller then
         local st = controller.get_state()
-        if st.a.just_pressed then fetch_all(); next_fetch = REFRESH end
+        if st.a.just_pressed then fetch_all(); next_fetch = P().refresh end
+        if st.right.just_pressed then switch(1) end
+        if st.left.just_pressed then switch(-1) end
         if st.start.just_pressed then util.exit() end
     end
     -- Свіжа Keira: шпалери теж оновлюють тікери по черзі
     if http and wifi then
         next_fetch = next_fetch - delta
         if next_fetch <= 0 then
-            if next_sym > 1 or not (at and os.time() - at < REFRESH) then
+            local refresh = P().refresh
+            if next_sym > 1 or not (at and os.time() - at < refresh) then
                 fetch(SYMBOLS[next_sym])
                 next_sym = next_sym % #SYMBOLS + 1
-                next_fetch = next_sym == 1 and REFRESH or 2
+                -- у застосунку кадр усе одно чекає на мережу, тож без пауз між тікерами
+                next_fetch = next_sym == 1 and refresh or (controller and 0 or 2)
             else
-                next_fetch = REFRESH - (os.time() - at)
+                next_fetch = refresh - (os.time() - at)
             end
         end
     end
@@ -175,7 +216,7 @@ local function card(sym, k, x, y, w, h)
     end
     local rates = d.closes
     local n = #rates
-    local last, prev = rates[n], rates[n - 1]
+    local last, prev = rates[n], rates[1]
     local diff = last - prev
     local pct = diff / prev * 100
     if d.name and d.name ~= "" and not NAMES[sym] then
@@ -197,7 +238,7 @@ local function card(sym, k, x, y, w, h)
     end
     text(x + 22, y + h - 4, string.format("%.2f (%s%.2f%%)", diff < 0 and -diff or diff, up and "+" or "-", pct < 0 and -pct or pct), dc, "6x12")
 
-    -- Графік за 30 днів: заливка під лінією, лінія, мітка останнього дня
+    -- Графік за період: заливка під лінією, лінія, пунктир на рівні бази, мітка останньої ціни
     local dim = rgb(col[1] * 0.25 + BG[1], col[2] * 0.25 + BG[2], col[3] * 0.25 + BG[3])
     local lo, hi = rates[1], rates[1]
     for _, r in ipairs(rates) do lo = min(lo, r); hi = max(hi, r) end
@@ -205,7 +246,9 @@ local function card(sym, k, x, y, w, h)
     local gx, gy, gw, gh = x + 136, y + 10, w - 146, h - 20
     local function px(i) return gx + (i - 1) / (n - 1) * gw end
     local function py(r) return gy + gh - (r - lo) / (hi - lo) * gh end
-    local reveal = min(n, 2 + floor(t * 20))
+    local reveal = min(n, 2 + floor(t / 1.5 * n))  -- графік «малюється» за 1.5 с
+    local base = floor(py(prev))
+    for bx = gx, gx + gw, 6 do display.fill_rect(floor(bx), base, 3, 1, rgb(80, 90, 115)) end
     for i = 2, reveal do
         local x0, y0, x1, y1 = px(i - 1), py(rates[i - 1]), px(i), py(rates[i])
         display.fill_triangle(floor(x0), floor(y0), floor(x1), floor(y1), floor(x0), gy + gh, dim)
@@ -243,8 +286,11 @@ function lilka.draw()
         display.fill_circle(58, 14, 3, mc)
         text(66, 18, m and "біржа відкрита" or "біржа закрита", mc, "6x12")
     end
-    local note = at and os.date("%d.%m %H:%M", at) or ""
+    local note = ""
+    if at then note = os.date(os.time() - at > 12 * 3600 and "%d.%m %H:%M" or "%H:%M", at) end
     text(W - 10 - #note * 6, 18, note, rgb(150, 160, 185), "6x12")
+    local pl = P().label
+    text(W - 10 - #note * 6 - 10 - utf8.len(pl) * 6, 18, pl, rgb(240, 244, 255), "6x12")
     local any = false
     for _, s in ipairs(SYMBOLS) do if data[s] then any = true end end
     if any then

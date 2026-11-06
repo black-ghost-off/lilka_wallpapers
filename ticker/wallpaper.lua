@@ -1,16 +1,24 @@
--- Криптовалюти: ціна в USDT, зміна за 24 години й графік за добу (Binance, без ключа API).
--- Дані зберігаються в ticker.txt. Застосунок оновлює їх при запуску; шпалери на свіжій Keira
--- теж оновлюють, по одній монеті за раз, щоб не зависати надовго.
--- Застосунок: A — оновити, START — вихід.
+-- Криптовалюти: ціна в USDT, зміна й графік за обраний період (Binance, без ключа API).
+-- Дані й обраний період зберігаються в ticker.txt. Застосунок оновлює їх при запуску; шпалери
+-- на свіжій Keira теж оновлюють, по одній монеті за раз, щоб не зависати надовго.
+-- Застосунок: ← → — період, A — оновити, START — вихід.
 
 lilka.fullscreen = false
 
 local COINS = { "BTC", "ETH", "SOL", "BNB" }
 local QUOTE = "USDT"
-local POINTS = 48          -- свічок по 30 хв = доба
 local CACHE = "ticker.txt"
-local REFRESH = 5 * 60     -- секунд між оновленнями монети на шпалерах
-local API = "https://data-api.binance.vision/api/v3/klines?interval=30m&limit=" .. POINTS .. "&symbol="
+local PERIOD = "1d"        -- типовий період, поки його не змінили стрілками
+local API = "https://data-api.binance.vision/api/v3/klines"
+
+-- interval × limit свічок Binance; refresh — секунд між оновленнями
+local PERIODS = {
+    { key = "1h", label = "1 год",   interval = "1m",  limit = 60, refresh = 60 },
+    { key = "1d", label = "24 год",  interval = "30m", limit = 48, refresh = 5 * 60 },
+    { key = "1w", label = "тиждень", interval = "4h",  limit = 42, refresh = 30 * 60 },
+    { key = "1M", label = "місяць",  interval = "1d",  limit = 30, refresh = 60 * 60 },
+    { key = "1y", label = "рік",     interval = "1w",  limit = 52, refresh = 6 * 60 * 60 },
+}
 
 local floor, sin = math.floor, math.sin
 local function min(a, b) if a < b then return a end return b end
@@ -26,8 +34,14 @@ local status
 local next_coin, next_fetch = 1, 1.5
 local C = {}
 
+local function find_period(key)
+    for i, p in ipairs(PERIODS) do if p.key == key then return i end end
+end
+local period = find_period(PERIOD) or 2
+local function P() return PERIODS[period] end
+
 local function save()
-    local lines = { "at=" .. (at or 0) }
+    local lines = { "at=" .. (at or 0), "period=" .. P().key }
     for _, c in ipairs(COINS) do
         if data[c] then lines[#lines + 1] = c .. "=" .. table.concat(data[c], ",") end
     end
@@ -40,6 +54,8 @@ local function load()
     for k, v in text:gmatch("(%w+)=([^\n]*)") do
         if k == "at" then
             at = tonumber(v)
+        elseif k == "period" then
+            period = find_period(v) or period
         else
             local list = {}
             for x in v:gmatch("[^,]+") do list[#list + 1] = x end
@@ -54,7 +70,9 @@ local function fetch(coin)
         return false
     end
     collectgarbage()
-    local ok, res = pcall(http.execute, { url = API .. coin .. QUOTE })
+    local p = P()
+    local url = API .. "?interval=" .. p.interval .. "&limit=" .. p.limit .. "&symbol=" .. coin .. QUOTE
+    local ok, res = pcall(http.execute, { url = url })
     if not (ok and res.code == 200 and res.response) then
         status = "Не вдалося завантажити"
         return false
@@ -90,8 +108,16 @@ function lilka.init()
     load()
     if controller then
         for _, c in ipairs(COINS) do fetch(c) end
-        next_fetch = REFRESH
+        next_fetch = P().refresh
     end
+end
+
+-- Новий період: старі дані вже не підходять, тож завантажуємо монети наново по одній
+local function switch(d)
+    period = (period - 1 + d) % #PERIODS + 1
+    data, at, status, t = {}, nil, nil, 0
+    save()
+    next_coin, next_fetch = 1, 0
 end
 
 function lilka.update(delta)
@@ -101,20 +127,24 @@ function lilka.update(delta)
         if s.start.just_pressed then util.exit() end
         if s.a.just_pressed then
             for _, c in ipairs(COINS) do fetch(c) end
-            next_fetch = REFRESH
+            next_fetch = P().refresh
         end
+        if s.right.just_pressed then switch(1) end
+        if s.left.just_pressed then switch(-1) end
     end
     -- На шпалерах (і в застосунку) оновлюємо монети по черзі
     if http and wifi then
         next_fetch = next_fetch - delta
         if next_fetch <= 0 then
-            local fresh = at and os.time() - at < REFRESH
+            local refresh = P().refresh
+            local fresh = at and os.time() - at < refresh
             if not fresh or next_coin > 1 then
                 fetch(COINS[next_coin])
                 next_coin = next_coin % #COINS + 1
-                next_fetch = next_coin == 1 and REFRESH or 2
+                -- у застосунку кадр усе одно чекає на мережу, тож без пауз між монетами
+                next_fetch = next_coin == 1 and refresh or (controller and 0 or 2)
             else
-                next_fetch = REFRESH - (os.time() - at)
+                next_fetch = refresh - (os.time() - at)
             end
         end
     end
@@ -164,7 +194,7 @@ local function row(coin, y, h)
     end
     text(pct, 56, y + 14, col, "6x12")
 
-    -- Графік за добу
+    -- Графік за період
     local lo, hi = last, last
     local v = {}
     for k = 1, n do
@@ -176,8 +206,8 @@ local function row(coin, y, h)
     local function px(k) return floor(gx + (k - 1) / (n - 1) * gw) end
     local function py(p) return floor(gy + gh - (p - lo) / (hi - lo) * gh) end
     local base = py(first)
-    local reveal = min(n, 2 + floor(t * 30))
-    -- Пунктир на рівні ціни добу тому
+    local reveal = min(n, 2 + floor(t / 1.5 * n))  -- графік «малюється» за 1.5 с
+    -- Пунктир на рівні ціни на початку періоду
     for x = gx, gx + gw, 6 do display.fill_rect(x, base, 3, 1, C.gray) end
     for k = 2, reveal do
         local x0, y0, x1, y1 = px(k - 1), py(v[k - 1]), px(k), py(v[k])
@@ -198,7 +228,7 @@ end
 function lilka.draw()
     display.fill_screen(C.bg)
     text("Crypto", 6, 13, C.text, "8x13")
-    text("/ " .. QUOTE .. ", 24h", 58, 12, C.gray, "6x12")
+    text("/ " .. QUOTE .. ", " .. P().label, 58, 12, C.gray, "6x12")
     local note
     if status and controller then
         note = status
